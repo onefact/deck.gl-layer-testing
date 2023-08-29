@@ -7,13 +7,9 @@ import {HexagonLayer} from '@deck.gl/aggregation-layers';
 import {ColumnLayer} from '@deck.gl/layers';
 import DeckGL from '@deck.gl/react';
 
-import {csv, json} from 'd3-request';
+import {csv} from 'd3-request';
 
-// Source data CSV
 const DATA_URL =
-  'https://raw.githubusercontent.com/visgl/deck.gl-data/master/examples/3d-heatmap/heatmap-data.csv'; // eslint-disable-line
-
-const COLUMN_DATA_URL =
   'https://raw.githubusercontent.com/onefact/maps.payless.health/main/data/hexagons.json'; // eslint-disable-line
 
 const ambientLight = new AmbientLight({
@@ -62,18 +58,19 @@ export const colorRange = [
   [209, 55, 78]
 ];
 
+({object}) => object && `height: ${object.value * 5000}m`
 function getTooltip({object}) {
   if (!object) {
     return null;
   }
-  const lat = object.centroid.position[1];
-  const lng = object.centroid.position[0];
-  const count = object.points.length;
-
+  // const lat = object.centroid.position[1];
+  // const lng = object.centroid.position[0];
+  // const count = object.points.length;
+    // latitude: ${Number.isFinite(lat) ? lat.toFixed(6) : ''}
+    // longitude: ${Number.isFinite(lng) ? lng.toFixed(6) : ''}
+    // ${count} Accidents`;
   return `\
-    latitude: ${Number.isFinite(lat) ? lat.toFixed(6) : ''}
-    longitude: ${Number.isFinite(lng) ? lng.toFixed(6) : ''}
-    ${count} Accidents`;
+    height: ${Number.isFinite(object.value) ? 5000 * object.value.toFixed(3): ''}m`;
 }
 
 /* eslint-disable react/no-deprecated */
@@ -91,8 +88,7 @@ export default function App({
       diskResolution: 12,
       elevationScale: 100,
       extruded: true,
-      data: COLUMN_DATA_URL,
-      // data: 'https://raw.githubusercontent.com/onefact/maps.payless.health/main/data/hexagons.json',
+      data: DATA_URL,
       getElevation: d => d.value * 50,
       getFillColor: d => [48, 128, d.value * 255, 255],
       getLineColor: [0, 0, 0],
@@ -101,7 +97,10 @@ export default function App({
       pickable: true,
       radius: 250,
       transitions: {
-        elevationScale: 3000
+        getElevation: {
+          duration: 1000,
+          enter: () => [0]
+        }
       }
     })
   ];
@@ -112,7 +111,7 @@ export default function App({
       effects={[lightingEffect]}
       initialViewState={INITIAL_VIEW_STATE}
       controller={true}
-      // getTooltip={getTooltip}
+      getTooltip={getTooltip}
     >
       <Map reuseMaps mapLib={maplibregl} mapStyle={mapStyle} preventStyleDiffing={true} />
     </DeckGL>
@@ -122,24 +121,4 @@ export default function App({
 export function renderToDOM(container) {
   const root = createRoot(container);
   root.render(<App />);
-
-  csv(DATA_URL, (error, response) => {
-    if (!error) {
-      const data = response.map(d => [Number(d.lng), Number(d.lat)]);
-      root.render(<App data={data} />);
-    }
-  });
-
-  // json(COLUMN_DATA_URL, (error, response) => {
-  //   if (!error) {
-  //     // console.log(response);
-  //     const data = response; //.map(d => [Number(d.lng), Number(d.lat)]);
-  //     root.render(<App data={data} />);
-  //   }
-    /* global fetch */
-  fetch(COLUMN_DATA_URL)
-    .then(response => response.json())
-    .then(({features}) => {
-      root.render(<App data={features} />);
-    });
 }
